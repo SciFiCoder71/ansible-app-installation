@@ -1,0 +1,56 @@
+- hosts: localhost
+  vars:
+    region: "us-east-1"
+    first_stack: "stack1"
+    second_stack: "stack2"
+  tasks:
+    - name: Add the user
+      user:
+        name: app-user
+        shell: /bin/bash
+
+    - name: Upgrade packages on machines
+      yum:
+        name: '*'
+        state: latest
+      
+    - name: Install packages
+      yum:
+        name:
+          - java-1.8.0-openjdk
+        state: latest
+      
+    - name: remove old dirs
+      file:
+        path:/opt/install
+      state: absent
+
+    - name: create new install directory
+      file:
+        path: /opt/install
+        state: directory
+        owner: app-user
+        group: app-user
+      
+    - name: download installer
+      shell: aws --region us-east-1 s3 cp s3://sourcebucket/installer.tar.gz /opt/instsller
+
+    - name: extract installer
+      unarchive:
+        src: /opt/installer/installer.tar.gz
+        dest: /opt/installer
+        remote_src: yes
+        owner: app-user
+        group: app-user
+
+    - name: write to installer config file
+      replace:
+        path: /opt/installer/app/server.xml
+        regexp: 'Context path=""'
+        replace: 'Context path="my-app"'
+
+    - name: start app
+      shell: ./opt/installer/app/bin/startup.sh
+  
+  
+
